@@ -1,0 +1,9 @@
+[submodule "vendors/rauth"]
+	path = vendors/rauth
+	url = git://github.com/litl/rauth.git
+[submodule "vendors/requests"]
+	path = vendors/requests
+	url = git://github.com/kennethreitz/requests.git
+[submodule "vendors/certifi"]
+	path = vendors/certifi
+	url = https://github.com/kennethreitz/certifi.git
