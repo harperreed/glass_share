@@ -1,0 +1,27 @@
+<!-- header -->
+<header class="header">
+  <div class="container ">
+    <div class="row">
+      <div class="span4"><h1><a href="/">{{site_name}}</a></h1></div>
+      <div class="span8">
+        <ul class="nav nav-pills header-nav pull-right">
+          <li {% ifequal active "home" %}class="active"{% endifequal %}><a href="/">Home</a></li>
+         
+          {% if user %}
+
+            <li><a href="/account">Account</a></li>
+            <li><a href="{{logout_url}}">Logout</a></li>
+          {% else %}
+          <li><a href="{{login_url}}">Login</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</header>
+<!-- /header -->
+    <style>
+      body {
+        padding-top: 10px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
