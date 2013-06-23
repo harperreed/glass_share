@@ -1,6 +1,6 @@
-runserver: 
+runserver:
 	python /usr/local/google_appengine/dev_appserver.py .
-deploy : 
+deploy :
 	python /usr/local/google_appengine/appcfg.py update .
 
 clean :
