@@ -1,4 +1,4 @@
-application: python27-app
+application: glass-upload
 version: 1
 runtime: python27
 threadsafe: true
