@@ -21,6 +21,8 @@ import io
 import json
 import logging
 import webapp2
+import mimetypes
+from google.appengine.api import mail
 
 from apiclient.http import MediaIoBaseUpload
 from oauth2client.appengine import StorageByKeyName
@@ -28,6 +30,8 @@ from oauth2client.appengine import StorageByKeyName
 from model import Credentials
 import util
 
+
+# This is where the magic happens. Why this is its own handler is confusing
 
 class NotifyHandler(webapp2.RequestHandler):
   """Request Handler for notification pings."""
@@ -37,6 +41,7 @@ class NotifyHandler(webapp2.RequestHandler):
     logging.info('Got a notification with payload %s', self.request.body)
     data = json.loads(self.request.body)
     userid = data['userToken']
+
     # TODO: Check that the userToken is a valid userToken.
     self.mirror_service = util.create_service(
         'mirror', 'v1',
@@ -61,6 +66,7 @@ class NotifyHandler(webapp2.RequestHandler):
 
   def _handle_timeline_notification(self, data):
     """Handle timeline notification."""
+    userid = data['userToken']
     for user_action in data.get('userActions', []):
       if user_action.get('type') == 'SHARE':
         # Fetch the timeline item.
@@ -81,9 +87,21 @@ class NotifyHandler(webapp2.RequestHandler):
           else:
             logging.info('Unable to retrieve attachment: %s', resp.status)
         body = {
-            'text': 'Echoing your shared item: %s' % item.get('text', ''),
+            'text': 'Your shared item is being emailed: %s' % item.get('text', ''),
             'notification': {'level': 'DEFAULT'}
         }
+        #need to grab user details
+        #need to set email address
+        details = util.get_user_details(userid)
+        if details.email_address:
+          logging.info(details)
+          filename = str(attachments[0]['id']) + "." + str(mimetypes.guess_extension(attachment['contentType']))
+          notification_email = details.email_address
+          mail.send_mail(sender="natatwo@gmail.com",
+              to=notification_email,
+              subject=item.get('text', 'Media from Glass'),
+              body=item.get('text', '') + str("\n\nUploaded from https://glass-share.appspot.com/"),
+              attachments=[(filename, content)])
         self.mirror_service.timeline().insert(
             body=body, media_body=media).execute()
         # Only handle the first successful action.
