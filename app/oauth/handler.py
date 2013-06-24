@@ -121,9 +121,9 @@ class OAuthCodeExchangeHandler(OAuthBaseRequestHandler):
 
       # Insert a sharing contact.
       contact_body = {
-          'id': 'Python Quick Start',
-          'displayName': 'Python Quick Start',
-          'imageUrls': [util.get_full_url(self, '/static/images/python.png')]
+          'id': 'GlassShare',
+          'displayName': 'GlassShare',
+          'imageUrls': [util.get_full_url(self, '/static/images/glyphicons_011_camera.png')]
       }
       mirror_service.contacts().insert(body=contact_body).execute()
     else:
@@ -131,7 +131,7 @@ class OAuthCodeExchangeHandler(OAuthBaseRequestHandler):
 
     # Insert welcome message.
     timeline_item_body = {
-        'text': 'Welcome to the Python Quick Start',
+        'text': 'GlassShare will allow you to share your content to a specific email address.',
         'notification': {
             'level': 'DEFAULT'
         }
