@@ -22,10 +22,15 @@ from google.appengine.ext import db
 from oauth2client.appengine import CredentialsProperty
 
 
-class Credentials(db.Model):
+class Credentials(db.Expando):
   """Datastore entity for storing OAuth2.0 credentials.
 
   The CredentialsProperty is provided by the Google API Python Client, and is
   used by the Storage classes to store OAuth 2.0 credentials in the data store.
   """
   credentials = CredentialsProperty()
+
+
+class UserDetails(db.Expando):
+  userid = db.StringProperty()
+  email_address = db.EmailProperty()
