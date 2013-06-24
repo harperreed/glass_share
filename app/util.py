@@ -25,6 +25,7 @@ from oauth2client.appengine import StorageByKeyName
 import sessions
 
 from model import Credentials
+from model import UserDetails
 
 
 # Load the secret that is used for client side sessions
@@ -91,3 +92,15 @@ def auth_required(handler_method):
     else:
       handler_method(self, *args)
   return check_auth
+
+def get_user_details(userid):
+  #i don't trust this bullshit auth
+
+  try:
+    details = UserDetails.all().filter('userid = ', userid )[0]
+  except:
+    details = UserDetails(userid = userid)
+    details.save()
+
+  return details
+
