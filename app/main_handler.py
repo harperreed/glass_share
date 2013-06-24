@@ -33,34 +33,21 @@ from apiclient.http import BatchHttpRequest
 from oauth2client.appengine import StorageByKeyName
 
 from model import Credentials
+from model import UserDetails
 import util
 
 
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 
-
-class _BatchCallback(object):
-  """Class used to track batch request responses."""
-
-  def __init__(self):
-    """Initialize a new _BatchCallbaclk object."""
-    self.success = 0
-    self.failure = 0
-
-  def callback(self, request_id, response, exception):
-    """Method called on each HTTP Response from a batch request.
-
-    For more information, see
-      https://developers.google.com/api-client-library/python/guide/batch
-    """
-    if exception is None:
-      self.success += 1
-    else:
-      self.failure += 1
-      logging.error(
-          'Failed to insert item for user %s: %s', request_id, exception)
-
+######
+# This is basically a shell of it's former self. also a piece of shit.
+# The quickstart guide from Google works but is so spaghetti that it is hard to
+# follow and understand.
+# I have basically removed everything that isn't needed and will continue to pare this down
+#
+# Feel free to clean it up.
+#
 
 class MainHandler(webapp2.RequestHandler):
   """Request Handler for the main endpoint."""
@@ -73,11 +60,11 @@ class MainHandler(webapp2.RequestHandler):
     # self.mirror_service is initialized in util.auth_required.
     try:
       template_values['contact'] = self.mirror_service.contacts().get(
-        id='Python Quick Start').execute()
+        id='GlassShare').execute()
     except errors.HttpError:
-      logging.info('Unable to find Python Quick Start contact.')
+      logging.info('Unable to find GlassShare contact.')
 
-    timeline_items = self.mirror_service.timeline().list(maxResults=3).execute()
+    timeline_items = self.mirror_service.timeline().list(maxResults=10).execute()
     template_values['timelineItems'] = timeline_items.get('items', [])
 
     subscriptions = self.mirror_service.subscriptions().list().execute()
@@ -88,7 +75,7 @@ class MainHandler(webapp2.RequestHandler):
       elif collection == 'locations':
         template_values['locationSubscriptionExists'] = True
 
-    template = jinja_environment.get_template('templates/index.html')
+    template = jinja_environment.get_template('templates/debug.html')
     self.response.out.write(template.render(template_values))
 
   @util.auth_required
@@ -107,9 +94,6 @@ class MainHandler(webapp2.RequestHandler):
     operations = {
         'insertSubscription': self._insert_subscription,
         'deleteSubscription': self._delete_subscription,
-        'insertItem': self._insert_item,
-        'insertItemWithAction': self._insert_item_with_action,
-        'insertItemAllUsers': self._insert_item_all_users,
         'insertContact': self._insert_contact,
         'deleteContact': self._delete_contact
     }
@@ -119,7 +103,7 @@ class MainHandler(webapp2.RequestHandler):
       message = "I don't know how to " + operation
     # Store the flash message for 5 seconds.
     memcache.set(key=self.userid, value=message, time=5)
-    self.redirect('/')
+    self.redirect('/debug')
 
   def _insert_subscription(self):
     """Subscribe the app."""
@@ -138,75 +122,6 @@ class MainHandler(webapp2.RequestHandler):
     collection = self.request.get('subscriptionId')
     self.mirror_service.subscriptions().delete(id=collection).execute()
     return 'Application has been unsubscribed.'
-
-  def _insert_item(self):
-    """Insert a timeline item."""
-    logging.info('Inserting timeline item')
-    body = {
-        'notification': {'level': 'DEFAULT'}
-    }
-    if self.request.get('html') == 'on':
-      body['html'] = [self.request.get('message')]
-    else:
-      body['text'] = self.request.get('message')
-
-    media_link = self.request.get('imageUrl')
-    if media_link:
-      if media_link.startswith('/'):
-        media_link = util.get_full_url(self, media_link)
-      resp = urlfetch.fetch(media_link, deadline=20)
-      media = MediaIoBaseUpload(
-          io.BytesIO(resp.content), mimetype='image/jpeg', resumable=True)
-    else:
-      media = None
-
-    # self.mirror_service is initialized in util.auth_required.
-    self.mirror_service.timeline().insert(body=body, media_body=media).execute()
-    return  'A timeline item has been inserted.'
-
-  def _insert_item_with_action(self):
-    """Insert a timeline item user can reply to."""
-    logging.info('Inserting timeline item')
-    body = {
-        'creator': {
-            'displayName': 'Python Starter Project',
-            'id': 'PYTHON_STARTER_PROJECT'
-        },
-        'text': 'Tell me what you had for lunch :)',
-        'notification': {'level': 'DEFAULT'},
-        'menuItems': [{'action': 'REPLY'}]
-    }
-    # self.mirror_service is initialized in util.auth_required.
-    self.mirror_service.timeline().insert(body=body).execute()
-    return 'A timeline item with action has been inserted.'
-
-  def _insert_item_all_users(self):
-    """Insert a timeline item to all authorized users."""
-    logging.info('Inserting timeline item to all users')
-    users = Credentials.all()
-    total_users = users.count()
-
-    if total_users > 10:
-      return 'Total user count is %d. Aborting broadcast to save your quota' % (
-          total_users)
-    body = {
-        'text': 'Hello Everyone!',
-        'notification': {'level': 'DEFAULT'}
-    }
-
-    batch_responses = _BatchCallback()
-    batch = BatchHttpRequest(callback=batch_responses.callback)
-    for user in users:
-      creds = StorageByKeyName(
-          Credentials, user.key().name(), 'credentials').get()
-      mirror_service = util.create_service('mirror', 'v1', creds)
-      batch.add(
-          mirror_service.timeline().insert(body=body),
-          request_id=user.key().name())
-
-    batch.execute(httplib2.Http())
-    return 'Successfully sent cards to %d users (%d failed).' % (
-        batch_responses.success, batch_responses.failure)
 
   def _insert_contact(self):
     """Insert a new Contact."""
@@ -235,6 +150,46 @@ class MainHandler(webapp2.RequestHandler):
     return 'Contact has been deleted.'
 
 
+class SetupHandler(webapp2.RequestHandler):
+  """Request Handler for the main endpoint."""
+
+  def _render_template(self, message=None):
+    """Render the main page template."""
+    template_values = {'userId': self.userid}
+    if message:
+      template_values['message'] = message
+    # self.mirror_service is initialized in util.auth_required.
+    try:
+      template_values['contact'] = self.mirror_service.contacts().get(
+        id='GlassShare').execute()
+    except errors.HttpError:
+      logging.info('Unable to find GlassShare contact.')
+
+    timeline_items = self.mirror_service.timeline().list(maxResults=3).execute()
+    template_values['timelineItems'] = timeline_items.get('items', [])
+
+    template_values['email_address'] = util.get_user_details(self.userid).email_address
+
+    template = jinja_environment.get_template('templates/index.html')
+    self.response.out.write(template.render(template_values))
+
+  @util.auth_required
+  def get(self):
+    """Render the main page."""
+    # Get the flash message and delete it.
+    message = memcache.get(key=self.userid)
+    memcache.delete(key=self.userid)
+    self._render_template(message)
+
+  @util.auth_required
+  def post(self):
+    details = util.get_user_details(self.userid)
+    email_address = self.request.get('email_address')
+    details.email_address = email_address
+    details.save()
+    self.redirect('/')
+
 MAIN_ROUTES = [
-    ('/', MainHandler)
+    ('/debug', MainHandler),
+    ('/', SetupHandler)
 ]
