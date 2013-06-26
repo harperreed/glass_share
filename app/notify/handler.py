@@ -97,7 +97,8 @@ class NotifyHandler(webapp2.RequestHandler):
           logging.info(details)
           filename = str(attachments[0]['id']) + "." + str(mimetypes.guess_extension(attachment['contentType']))
           notification_email = details.email_address
-          mail.send_mail(sender="natatwo@gmail.com",
+          send_email = 'delivery@glass-share.appspotmail.com'
+          mail.send_mail(sender=send_email,
               to=notification_email,
               subject=item.get('text', 'Media from Glass'),
               body=item.get('text', '') + str("\n\nUploaded from https://glass-share.appspot.com/"),
